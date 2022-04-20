@@ -16,12 +16,24 @@ const handleListen = () => console.log(`Listening on http://localhost:3000`); //
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server }); // http서버 위에 webSocket서버를 만든다. 웹소켓만 작동시키려면 {server}를 생략한다.
 
+// fake database
+const sockets = [];
+
 // wss.는 전체 소켓에 대한 것 / socket.은 연결된 해당 브라우저에 대한 것
 wss.on('connection', (socket) => {
+  sockets.push(socket);
+  socket['nickname'] = 'Anon';
   console.log('connected to server ✅');
   socket.on('close', () => console.log('Disconnected from th Browser ❌'));
-  socket.on('message', (message) => {
-    socket.send(message.toString('utf-8'));
+  socket.on('message', (msg) => {
+    const message = JSON.parse(msg.toString('utf-8'));
+    switch (message.type) {
+      case 'new_message':
+        sockets.forEach((aSocket) => aSocket.send(`${socket.nickname}: ${message.payload}`));
+      case 'nickname':
+        // socket은 오브젝트이므로 새로 nickname을 추가해줄 수 있다.
+        socket['nickname'] = message.payload;
+    }
   });
 });
 
