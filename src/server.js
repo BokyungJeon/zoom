@@ -1,6 +1,10 @@
 import express from 'express';
 import http from 'http';
-import WebSocket from 'ws';
+import SoketIo from 'socket.io';
+// 브라우저간 호환(WebSocket은 오래된 브라우저에서 지원하지 않는 경우가 있다)
+// socket.io는 websocket을 포함한 여러 실시간 기능을 구현.
+// 접속이 끊겼을 때 자동으로 재접속을 시도한다.
+// 내가 만든 이벤트를 전송할 수 있고, 여러타입(object까지도)을 여러개까지 타입을 그대로 전송하고 받을 수 있다.
 
 const app = express();
 
@@ -10,12 +14,24 @@ app.use('/public', express.static(__dirname + '/public'));
 app.get('/', (_, res) => res.render('home'));
 app.get('/*', (_, res) => res.redirect('/'));
 
-const handleListen = () => console.log(`Listening on http://localhost:3000`); // ws://localhost:3000도 지원
-
 // http와 websocket을 같은 서버(포트)에서 작동
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server }); // http서버 위에 webSocket서버를 만든다. 웹소켓만 작동시키려면 {server}를 생략한다.
+const httpServer = http.createServer(app);
+const wsServer = SoketIo(httpServer);
 
+wsServer.on('connection', (socket) => {
+  socket.onAny((event) => {
+    console.log(`Socket Event: ${event}`);
+  });
+  socket.on('enter_room', (roomName, done) => {
+    // console.log(socket.id);
+    // console.log(socket.rooms);
+    socket.join(roomName);
+    done();
+    // console.log(socket.rooms);
+  });
+});
+
+/*
 // fake database
 const sockets = [];
 
@@ -36,5 +52,6 @@ wss.on('connection', (socket) => {
     }
   });
 });
-
-server.listen(3000, handleListen);
+*/
+const handleListen = () => console.log(`Listening on http://localhost:3000`); // ws://localhost:3000도 지원
+httpServer.listen(3000, handleListen);
