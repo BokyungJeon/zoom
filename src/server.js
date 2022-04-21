@@ -23,35 +23,25 @@ wsServer.on('connection', (socket) => {
     console.log(`Socket Event: ${event}`);
   });
   socket.on('enter_room', (roomName, done) => {
-    // console.log(socket.id);
-    // console.log(socket.rooms);
+    // 여기서 socket.은 해당 이벤트(enter_room)가 발생한 소켓
     socket.join(roomName);
     done();
-    // console.log(socket.rooms);
+    console.log(roomName);
+    socket.to(roomName).emit('welcome');
+  });
+  // disconnecting: 연결이 끊기기 바로 직전 찰나에 발생하는 이벤트. room정보가 살아있음
+  // disconnect: 연결이 완전히 끊어졌을 때 발생하는 이벤트. room정보가 비어있음
+  socket.on('disconnecting', () => {
+    // 여기서 socket.은 해당 이벤트(disconnecting)가 발생한 소켓
+    // socket.rooms에는 Set(중복 X, index X, forEach O)형태로 diconnecting이벤트가 발생한 socket이 들어있다.
+    // 예를들어 브라우저 하나 껐을 때는 {"처음들어갈때 id", "내가 들어간 방이름"}이 들어있다.
+    console.log(socket.rooms);
+    socket.rooms.forEach((room) => {
+      console.log('room', room);
+      socket.to(room).emit('bye');
+    });
   });
 });
 
-/*
-// fake database
-const sockets = [];
-
-// wss.는 전체 소켓에 대한 것 / socket.은 연결된 해당 브라우저에 대한 것
-wss.on('connection', (socket) => {
-  sockets.push(socket);
-  socket['nickname'] = 'Anon';
-  console.log('connected to server ✅');
-  socket.on('close', () => console.log('Disconnected from th Browser ❌'));
-  socket.on('message', (msg) => {
-    const message = JSON.parse(msg.toString('utf-8'));
-    switch (message.type) {
-      case 'new_message':
-        sockets.forEach((aSocket) => aSocket.send(`${socket.nickname}: ${message.payload}`));
-      case 'nickname':
-        // socket은 오브젝트이므로 새로 nickname을 추가해줄 수 있다.
-        socket['nickname'] = message.payload;
-    }
-  });
-});
-*/
 const handleListen = () => console.log(`Listening on http://localhost:3000`); // ws://localhost:3000도 지원
 httpServer.listen(3000, handleListen);
