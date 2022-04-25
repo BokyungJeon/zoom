@@ -19,6 +19,7 @@ const httpServer = http.createServer(app);
 const wsServer = SoketIo(httpServer);
 
 wsServer.on('connection', (socket) => {
+  socket['nickname'] = 'Anonymous';
   socket.onAny((event) => {
     console.log(`Socket Event: ${event}`);
   });
@@ -27,20 +28,27 @@ wsServer.on('connection', (socket) => {
     socket.join(roomName);
     done();
     console.log(roomName);
-    socket.to(roomName).emit('welcome');
+    socket.to(roomName).emit('welcome', socket.nickname);
   });
   // disconnecting: 연결이 끊기기 바로 직전 찰나에 발생하는 이벤트. room정보가 살아있음
   // disconnect: 연결이 완전히 끊어졌을 때 발생하는 이벤트. room정보가 비어있음
   socket.on('disconnecting', () => {
     // 여기서 socket.은 해당 이벤트(disconnecting)가 발생한 소켓
     // socket.rooms에는 Set(중복 X, index X, forEach O)형태로 diconnecting이벤트가 발생한 socket이 들어있다.
-    // 예를들어 브라우저 하나 껐을 때는 {"처음들어갈때 id", "내가 들어간 방이름"}이 들어있다.
+    // 브라우저 하나 껐을 때 {"처음들어갈때 id", "내가 들어간 방이름"}이 들어있다.
     console.log(socket.rooms);
     socket.rooms.forEach((room) => {
       console.log('room', room);
-      socket.to(room).emit('bye');
+      socket.to(room).emit('bye', socket.nickname);
     });
   });
+
+  socket.on('new_message', (msg, room, done) => {
+    socket.to(room).emit('new_message', `${socket.nickname}: ${msg}`);
+    done();
+  });
+
+  socket.on('nickname', (nickname) => (socket['nickname'] = nickname));
 });
 
 const handleListen = () => console.log(`Listening on http://localhost:3000`); // ws://localhost:3000도 지원
